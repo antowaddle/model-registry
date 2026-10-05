@@ -1349,6 +1349,7 @@ components:
                 - performance-metrics
                 - accuracy-metrics
                 - security-metrics
+                - evaluation-metrics
             customProperties:
               description: User provided custom properties which are not defined by its type.
               type: object
@@ -1388,6 +1389,7 @@ components:
                 model-artifact: 3
                 performance-metrics: 12
                 accuracy-metrics: 2
+                evaluation-metrics: 8
         - $ref: "#/components/schemas/BaseModel"
         - $ref: "#/components/schemas/BaseResource"
     CatalogModelArtifact:
