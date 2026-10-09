@@ -1,0 +1,34 @@
+apiVersion: contracts.rhoai.io/v1alpha1
+kind: ContractSet
+metadata:
+  name: model-catalog
+spec:
+  contracts:
+    - id: model-catalog-v1
+      type: openapi
+      declaredArtifact: api/openapi/catalog-v1.yaml
+      # Scopes compatibility comparisons to the Model Catalog v1 surface.
+      # Other bundled plugin APIs (MCP, agent, skill) are out of scope here.
+      matchPath: "^/api/model_catalog/v1(/|$)"
+      policy:
+        # The checker rejects any other oasdiff version, including
+        # `go install` builds that print "main" as their display version.
+        oasdiffVersion: "1.33.0"
+        flattenAllOf: true
+        severityOverrides:
+          # oasdiff treats removing an optional response field as info-level.
+          # Dashboard consumers rely on optional fields such as sourceId, so
+          # this contract promotes that finding to warn. Additive optional
+          # response fields remain compatible.
+          response-optional-property-removed: warn
+      generator:
+        adapter: openapi.bundle.yq-merge
+        script: scripts/merge_catalog_specs.sh
+        yqEnvVar: YQ
+        sourceDir: api/openapi/src
+        sourceGlobs:
+          - catalog-v1.yaml
+          - lib/*.yaml
+          - plugins/*-v1.yaml
+        entrypointArg: catalog-v1.yaml
+        output: api/openapi/catalog-v1.yaml
