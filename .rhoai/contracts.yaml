@@ -14,6 +14,8 @@ spec:
         # The checker rejects any other oasdiff version, including
         # `go install` builds that print "main" as their display version.
         oasdiffVersion: "1.33.0"
+        # The shared checker also verifies yq before it parses this descriptor.
+        yqVersion: "4.45.1"
         flattenAllOf: true
         severityOverrides:
           # oasdiff treats removing an optional response field as info-level.

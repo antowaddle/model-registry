@@ -6,26 +6,25 @@ Compatibility for the Model Catalog v1 API is checked by the generic
 [HTTP/database behavior suite](../catalog/internal/server/contract/README.md).
 Neither needs a cluster. This repository contributes only its descriptor
 and its existing bundler (`scripts/merge_catalog_specs.sh`); the comparison
-engine itself — baseline resolution, oasdiff invocation, severity policy,
-report generation — is generic and lives in the API Contract working
-group's repository, not duplicated here.
+engine itself — baseline resolution, tool pinning, oasdiff invocation,
+severity policy, report generation — is generic and lives in
+[`red-hat-data-services/contract-tests`](https://github.com/red-hat-data-services/contract-tests),
+not duplicated here.
 
 (This replaces the earlier `scripts/check_catalog_compatibility.py` /
 `scripts/test_catalog_compatibility.py` prototype, now generalized so a
 second provider repository never needs to copy this logic.)
 
-## Get the central tooling
+## Get the shared tooling
 
-The working-group repository currently hosts the `openapi-compat` module as
-a placeholder for the not-yet-created `api-contract-central` (see that
-repository's `tracking/DECISIONS.md`, D-014):
+Clone the shared repository:
 
 ```sh
-git clone git@github.com:etirelli/rhoai-api-contract-wg.git ../api-contract-central
+git clone https://github.com/red-hat-data-services/contract-tests.git ../contract-tests
 ```
 
-Point `API_CONTRACT_CENTRAL` at that checkout for the regression tests
-below, and invoke its CLI directly for a manual run.
+Point `CONTRACT_TESTS` at that checkout for the regression tests below, and
+invoke its CLI directly for a manual run.
 
 ## Install the pinned tool
 
@@ -60,7 +59,7 @@ target-branch check, resolve that reference once, then pass its SHA:
 ```sh
 baseline_sha=$(git rev-parse refs/remotes/odh/main)
 OASDIFF="$PWD/bin/oasdiff" YQ="$PWD/bin/yq" \
-python3 ../api-contract-central/cmd/rhoai-contract/cli.py check \
+python3 ../contract-tests/cmd/contract-tests/cli.py check \
   --repo . \
   --contract-set .rhoai/contracts.yaml \
   --baseline-ref "$baseline_sha" \
@@ -82,6 +81,7 @@ for enforcement.
   changes to the other bundled plugin APIs (MCP, agent, skill) are out of
   scope for this contract.
 - **`policy.oasdiffVersion`** — the pinned tool version (`1.33.0`).
+- **`policy.yqVersion`** — the pinned bundling-tool version (`4.45.1`).
 - **`policy.severityOverrides`** — promotes `response-optional-property-removed`
   from oasdiff's default `info` to `warn`. Dashboard consumers use optional
   fields such as `sourceId`; removing a declared response field must
@@ -94,9 +94,9 @@ for enforcement.
   (`api/openapi/src/{catalog-v1.yaml,lib/*.yaml,plugins/*-v1.yaml}`).
 
 See the central repository's
-[`schemas/contract-set.schema.json`](https://github.com/etirelli/rhoai-api-contract-wg/blob/main/schemas/contract-set.schema.json)
+[`schemas/contract-set.schema.json`](https://github.com/red-hat-data-services/contract-tests/blob/main/schemas/contract-set.schema.json)
 and
-[`docs/onboarding/openapi-compat.md`](https://github.com/etirelli/rhoai-api-contract-wg/blob/main/docs/onboarding/openapi-compat.md)
+[`docs/onboarding/openapi-compat.md`](https://github.com/red-hat-data-services/contract-tests/blob/main/docs/onboarding/openapi-compat.md)
 for the general descriptor reference and onboarding steps that would apply
 to any other provider adopting this engine.
 
@@ -142,11 +142,11 @@ Always read `report.json.status`: report-only exit `0` does not mean compatibili
 `scripts/test_catalog_contract_compat.py` proves this repository's real
 descriptor and bundler integrate correctly with the generic engine (it does
 not re-derive the engine's own generic test cases, which live in the
-central repository). Requires `API_CONTRACT_CENTRAL` to point at a local
+shared repository). Requires `CONTRACT_TESTS` to point at a local
 checkout of that repository:
 
 ```sh
-API_CONTRACT_CENTRAL=../api-contract-central \
+CONTRACT_TESTS=../contract-tests \
   python3 -m pytest scripts/test_catalog_contract_compat.py -v
 ```
 
@@ -155,15 +155,12 @@ additive optional field, a stale bundle, an out-of-scope plugin change, a
 missing baseline, and a wrong-API-version baseline, and asserts the engine's
 response to each.
 
-## Remaining integration
+## CI integration
 
-No CI workflows or API specifications are changed by this. The central
-repository's `.github/workflows/provider-openapi-check.yml` is a drafted,
-not-yet-wired shape for a reusable workflow. To turn this into a trusted PR
-check, CI must obtain baseline SHAs from the protected base/release policy,
-pin the runner/tool/generator and their policy from trusted configuration,
-run the regression tests and checker, and archive the report. Start
-report-only as proposed.
+`check-model-catalog-contract.yml` calls the shared reusable workflow by the
+full commit SHA pinned below. It resolves the PR base SHA locally and runs
+in report-only mode; compatibility findings do not fail the PR yet.
+Infrastructure and integrity failures still fail closed.
 
 oasdiff checks declared API compatibility; it does not prove implementation
 behavior, authorization at a deployed proxy boundary, or consumer migration
