@@ -1,0 +1,25 @@
+name: Model Catalog contract compatibility
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/check-model-catalog-contract.yml"
+      - ".rhoai/contracts.yaml"
+      - "api/openapi/catalog-v1.yaml"
+      - "api/openapi/src/catalog-v1.yaml"
+      - "api/openapi/src/lib/**"
+      - "api/openapi/src/plugins/*-v1.yaml"
+      - "scripts/merge_catalog_specs.sh"
+
+permissions:
+  contents: read
+
+jobs:
+  model-catalog-contract:
+    uses: red-hat-data-services/contract-tests/.github/workflows/provider-openapi-check.yml@4d6d6086c2a14f4ba85cf8ff3f4c41a4c26fb690
+    with:
+      contract-set: .rhoai/contracts.yaml
+      baseline-refs: ${{ github.event.pull_request.base.sha }}
+      oasdiff-version: "1.33.0"
+      yq-version: "4.45.1"
+      mode: report

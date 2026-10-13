@@ -10,14 +10,13 @@ prove that *this repository's* descriptor and bundler produce the expected
 result when run through that engine — it does not re-derive every generic
 edge case.
 
-Requires the central tooling repository (currently a placeholder for
-api-contract-central; see its tracking/DECISIONS.md D-014) checked out
-locally, with its path given via the API_CONTRACT_CENTRAL environment
-variable. A missing or misconfigured central checkout is a failure, not a
-skip, so a check that never ran cannot be mistaken for a pass.
+Requires the shared `red-hat-data-services/contract-tests` repository
+checked out locally, with its path given via the CONTRACT_TESTS environment
+variable. A missing or misconfigured checkout is a failure, not a skip, so a
+check that never ran cannot be mistaken for a pass.
 
 Run with:
-  API_CONTRACT_CENTRAL=/path/to/api_contract \
+  CONTRACT_TESTS=/path/to/contract-tests \
     python3 -m pytest scripts/test_catalog_contract_compat.py -v
 """
 
@@ -36,17 +35,16 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _central_repo():
-    value = os.environ.get("API_CONTRACT_CENTRAL")
+    value = os.environ.get("CONTRACT_TESTS")
     if not value:
         raise RuntimeError(
-            "Set API_CONTRACT_CENTRAL to a local checkout of the working-group "
-            "repository hosting the openapi-compat module (placeholder for "
-            "api-contract-central)."
+            "Set CONTRACT_TESTS to a local checkout of "
+            "red-hat-data-services/contract-tests."
         )
     central = Path(value).resolve()
-    cli = central / "cmd" / "rhoai-contract" / "cli.py"
+    cli = central / "cmd" / "contract-tests" / "cli.py"
     if not cli.is_file():
-        raise RuntimeError(f"{cli} not found; API_CONTRACT_CENTRAL={central} does not look like the central repo")
+        raise RuntimeError(f"{cli} not found; CONTRACT_TESTS={central} does not look like the shared repository")
     return central, cli
 
 
@@ -78,9 +76,15 @@ class TestCatalogContractCompat:
         self.calls = 0
 
     def git(self, *args):
-        environment = dict(os.environ,
-                           GIT_AUTHOR_NAME="Contract Tests", GIT_COMMITTER_NAME="Contract Tests",
-                           GIT_AUTHOR_EMAIL="contract-tests@example.invalid", GIT_COMMITTER_EMAIL="contract-tests@example.invalid")
+        environment = dict(
+            os.environ,
+            GIT_AUTHOR_NAME="Contract Tests",
+            GIT_COMMITTER_NAME="Contract Tests",
+            GIT_AUTHOR_EMAIL="contract-tests@example.invalid",
+            GIT_COMMITTER_EMAIL="contract-tests@example.invalid",
+            GIT_CONFIG_GLOBAL=os.devnull,
+            GIT_CONFIG_SYSTEM=os.devnull,
+        )
         return subprocess.run(["git", *args], cwd=self.repo, env=environment,
                               capture_output=True, text=True, check=True)
 
@@ -159,7 +163,7 @@ class TestCatalogContractCompat:
         assert report["baselines"][0]["sha256"] != report["candidate"]["sha256"]
 
     def test_missing_baseline_fails_in_report_only_mode(self):
-        result, report, _ = self.check(refs=["missing-release"], enforce=False)
+        result, report, _ = self.check(refs=["0" * 40], enforce=False)
         assert result.returncode == 2
         assert "Cannot resolve baseline" in report["errors"][0]
 
