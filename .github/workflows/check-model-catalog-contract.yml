@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   model-catalog-contract:
-    uses: red-hat-data-services/contract-tests/.github/workflows/provider-openapi-check.yml@4d6d6086c2a14f4ba85cf8ff3f4c41a4c26fb690
+    uses: red-hat-data-services/contract-tests/.github/workflows/provider-openapi-check.yml@d10b25c36b5fe0299893b71a45de67ca2d4759f8
     with:
       contract-set: .rhoai/contracts.yaml
       baseline-refs: ${{ github.event.pull_request.base.sha }}
